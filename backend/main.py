@@ -14,6 +14,7 @@ app = FastAPI(title='CQRobot-Online-Shop')
 
 api = FastAPI(title=app.title, servers=[{'url': '/api'}])
 # api.openapi_version = '3.0.3'
+
 app.mount(api.servers[0]['url'], api)
 
 frontend_dist_dirs = (
@@ -46,7 +47,5 @@ for frontend_dist in frontend_dist_dirs:
 else:
     raise RuntimeError(f'Frontend dist directory {frontend_dist_dirs[0]} does not exist!')
 
-
 # 包含auth路由
 api.include_router(auth_router)
-

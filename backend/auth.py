@@ -1,18 +1,56 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status
+# from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from database import User,SessionLocal
-from pydantic import BaseModel
-from sqlalchemy.exc import IntegrityError
-
-router = APIRouter()
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-
+from database import User, UserInfo, SessionLocal
+from utils import (
+    hash_password,
+    check_username_and_password,
+    create_access_token,
+    get_current_user,
+    add_token_to_blacklist,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_MINUTES)
+from pydantic import BaseModel, EmailStr, validator
+from typing import Optional
+from fastapi import HTTPException, APIRouter, Depends, Header, Body
+from sqlalchemy.orm import Session
+from database import SessionLocal, User
+from utils import create_access_token, verify_refresh_token, create_refresh_token
 
 class RegisterUser(BaseModel):
-    username: str
+    email: EmailStr
     password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    # email由邮箱格式来保证
+
+    @validator('password')
+    def check_password_not_empty(cls, value):
+        if not value:
+            raise HTTPException(
+                status_code=422, detail="password must not be empty")
+        return value
+
+
+class LoginFormData(BaseModel):
+    email: str
+    password: str
+
+
+class UserMe(BaseModel):
+    email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    # disabled: bool
+
+    class Config:
+        from_attributes = True
+
+
+router = APIRouter()
+
 
 def get_db():
     db = SessionLocal()
@@ -21,113 +59,111 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/users/register")
+
+@router.post("/users/register", status_code=status.HTTP_200_OK)
 async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
-    hashed_password = pwd_context.hash(user.password)
-    db_user = User(username=user.username, hashed_password=hashed_password)
-    db.add(db_user)
     try:
+        # 检查邮箱是否已经注册
+        existing_user = db.query(User).filter(User.email == user.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=400, detail="Email already registered")
+
+        # 加密密码
+        hashed_password = hash_password(user.password)
+        # 创建User实例
+        new_user = User(email=user.email,
+                        hashed_password=hashed_password, disabled=False)
+        db.add(new_user)
         db.commit()
-        return {"status": "success", "message": "User registered successfully."}
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Username already registered")
+        db.refresh(new_user)
 
-# 检查用户登录
-from typing import Tuple
+        # 总是创建UserInfo实例，即使信息部分为空
+        db_user_info = UserInfo(
+            user_id=new_user.id,
+            first_name=user.first_name if user.first_name else "",  # 如果提供了信息，则使用提供的信息，否则使用空字符串
+            last_name=user.last_name if user.last_name else "",  # 同上
+            phone_number=user.phone_number if user.phone_number else ""  # 同上
+        )
+        db.add(db_user_info)
+        db.commit()
 
-def check_username_and_password(db: Session, username: str, password: str) -> Tuple[bool, bool]:
-    user = db.query(User).filter(User.username == username).first()
-    if not user or not pwd_context.verify(password, user.hashed_password):
-        return False, False  # 用户不存在或密码错误
-    if user.disabled:
-        return True, True  # 用户存在且被禁用
-    return True, False  # 用户存在、密码正确且未被禁用
+        # 只返回HTTP状态码200，表示成功，不返回用户信息
+        return {"message": "User registered successfully."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/users/login")
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    is_authenticated, is_disabled = check_username_and_password(db, form_data.username, form_data.password)
-    
+async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
+    user_email = form_data.email
+    password = form_data.password
+    is_authenticated, not_disabled = check_username_and_password(
+        db, user_email, password)
+
     if not is_authenticated:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
-    if is_disabled:
-        raise HTTPException(status_code=403, detail="User is disabled")  # 403 Forbidden表示资源不可用
-    
-    return {"status": "success", "message": "User logged in successfully."}
+        raise HTTPException(
+            status_code=400, detail="Incorrect email or password")
+    if not not_disabled:
+        raise HTTPException(status_code=403, detail="User is disabled")
+
+    access_token = create_access_token(data={"sub": user_email})
+    refresh_token = create_refresh_token(data={"sub": user_email})  # 生成刷新令牌
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,  # 返回刷新令牌
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "refresh_expires_in": REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    }
 
 
-##########################
-# OAuth2认证
-##########################
-
-# import jwt
-# from datetime import datetime, timedelta
-# from fastapi import Depends, FastAPI, HTTPException, status
-# from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-# import os
-
-# SECRET_KEY = os.getenv("SECRET_KEY")
-# ALGORITHM = "HS256"
-# ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/token")
-
-# async def authenticate_user(username: str, password: str):
-#     # 这里应该是验证用户名和密码的逻辑
-#     # 假设有一个函数叫check_username_and_password
-#     user = check_username_and_password(username, password)
-#     if not user:
-#         return False
-#     return user
-
-# def create_access_token(data: dict, expires_delta: timedelta = None):
-#     to_encode = data.copy()
-#     if expires_delta:
-#         expire = datetime.utcnow() + expires_delta
-#     else:
-#         expire = datetime.utcnow() + timedelta(minutes=15)
-#     to_encode.update({"exp": expire})
-#     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-#     return encoded_jwt
+@router.post("/users/logout")
+async def logout_user(authorization: str = Header(None),  body: dict = Body(...),db: Session = Depends(get_db)):
+    refresh_token = body.get("refresh_token", "")
+    if authorization and authorization.startswith("Bearer "):
+        access_token = authorization.split(" ")[1]
+        # 获取Redis客户端实例，用于操作黑名单
+        # 禁用访问令牌
+        add_token_to_blacklist(access_token, ACCESS_TOKEN_EXPIRE_MINUTES * 60,db)
+        # 禁用刷新令牌
+        add_token_to_blacklist(refresh_token, REFRESH_TOKEN_EXPIRE_MINUTES * 60,db)
+        
+        return {"message": "You have been logged out."}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid authorization header.")
 
 
-# @router.post("/users/token")
-# async def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-#     user = db.query(User).filter(User.username == form_data.username).first()
-#     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect username or password",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     access_token = create_access_token(
-#         data={"sub": user.username}, expires_delta=access_token_expires
-#     )
-#     return {"access_token": access_token, "token_type": "bearer"}
 
-# from jose import jwt, JWTError
+@router.get("/me", response_model=UserMe)
+def read_user_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user_info = db.query(UserInfo).filter(
+        UserInfo.user_id == current_user.id).first()
+    if user_info:
+        return UserMe(
+            email=current_user.email,
+            first_name=user_info.first_name,
+            last_name=user_info.last_name,
+            phone_number=user_info.phone_number,
+            # disabled=current_user.disabled
+        )
+    else:
+        raise HTTPException(
+            status_code=404, detail="User information not found")
 
-# def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-#     credentials_exception = HTTPException(
-#         status_code=status.HTTP_401_UNAUTHORIZED,
-#         detail="Could not validate credentials",
-#         headers={"WWW-Authenticate": "Bearer"},
-#     )
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#         username: str = payload.get("sub")
-#         if username is None:
-#             raise credentials_exception
-#         user = db.query(User).filter(User.username == username).first()
-#         if user is None:
-#             raise credentials_exception
-#         return user
-#     except JWTError:
-#         raise credentials_exception
 
-# @router.get("/users/me")
-# async def read_users_me(current_user: User = Depends(get_current_user)):
-#     return {"username": current_user.username}
+@router.post("/users/refresh_token")
+async def refresh_access_token(body: dict = Body(...), db: Session = Depends(get_db)):
+    refresh_token = body.get("refresh_token", "")
+    user = verify_refresh_token(refresh_token, db)
+    if not user:
+        raise HTTPException(
+            status_code=403, detail="Refresh token is invalid or expired")
+
+    new_access_token = create_access_token(data={"sub": user.email})
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    }

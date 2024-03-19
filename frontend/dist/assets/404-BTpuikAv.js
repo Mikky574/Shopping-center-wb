@@ -1,1 +1,0 @@
-import{t}from"./index-BsWldzC8.js";var o=t(`<section class="text-gray-700 p-8"><h1 class="text-2xl font-bold">404: Not Found</h1><p class=mt-4>It's gone 😞`);function a(){return o()}export{a as default};
