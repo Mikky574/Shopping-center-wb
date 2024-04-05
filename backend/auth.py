@@ -1,21 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 # from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from database import User, UserInfo, SessionLocal
+from database import User, UserInfo
 from utils import (
     hash_password,
     check_username_and_password,
     create_access_token,
     get_current_user,
-    add_token_to_blacklist,
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    REFRESH_TOKEN_EXPIRE_MINUTES)
+    get_db,
+    verify_password)
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
-from fastapi import HTTPException, APIRouter, Depends, Header, Body
+from fastapi import HTTPException, APIRouter, Depends
 from sqlalchemy.orm import Session
-from database import SessionLocal, User
-from utils import create_access_token, verify_refresh_token, create_refresh_token
 
 class RegisterUser(BaseModel):
     email: EmailStr
@@ -37,7 +35,6 @@ class LoginFormData(BaseModel):
     email: str
     password: str
 
-
 class UserMe(BaseModel):
     email: EmailStr
     first_name: Optional[str] = None
@@ -50,15 +47,6 @@ class UserMe(BaseModel):
 
 
 router = APIRouter()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @router.post("/users/register", status_code=status.HTTP_200_OK)
 async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
@@ -93,47 +81,51 @@ async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+from pydantic import BaseModel, EmailStr
+
+class PasswordResetForm(BaseModel):
+    email: EmailStr
+    old_password: str
+    new_password: str
+
+@router.post("/users/reset-password")
+async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == form_data.email).first()
+
+    # 检查用户是否存在
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 验证旧密码
+    if not verify_password(form_data.old_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect password")
+
+    # 更新密码
+    user.hashed_password = hash_password(form_data.new_password)
+    db.commit()
+
+    return {"message": "Password updated successfully."}
+
 
 @router.post("/users/login")
 async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
     user_email = form_data.email
     password = form_data.password
-    is_authenticated, not_disabled = check_username_and_password(
-        db, user_email, password)
+
+    is_authenticated, not_disabled = check_username_and_password(user_email, password, db)
 
     if not is_authenticated:
-        raise HTTPException(
-            status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
     if not not_disabled:
         raise HTTPException(status_code=403, detail="User is disabled")
 
     access_token = create_access_token(data={"sub": user_email})
-    refresh_token = create_refresh_token(data={"sub": user_email})  # 生成刷新令牌
 
     return {
         "access_token": access_token,
-        "refresh_token": refresh_token,  # 返回刷新令牌
         "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "refresh_expires_in": REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 7天的秒数
     }
-
-
-@router.post("/users/logout")
-async def logout_user(authorization: str = Header(None),  body: dict = Body(...),db: Session = Depends(get_db)):
-    refresh_token = body.get("refresh_token", "")
-    if authorization and authorization.startswith("Bearer "):
-        access_token = authorization.split(" ")[1]
-        # 获取Redis客户端实例，用于操作黑名单
-        # 禁用访问令牌
-        add_token_to_blacklist(access_token, ACCESS_TOKEN_EXPIRE_MINUTES * 60,db)
-        # 禁用刷新令牌
-        add_token_to_blacklist(refresh_token, REFRESH_TOKEN_EXPIRE_MINUTES * 60,db)
-        
-        return {"message": "You have been logged out."}
-    else:
-        raise HTTPException(status_code=401, detail="Invalid authorization header.")
-
 
 
 @router.get("/me", response_model=UserMe)
@@ -152,18 +144,3 @@ def read_user_me(current_user: User = Depends(get_current_user), db: Session = D
         raise HTTPException(
             status_code=404, detail="User information not found")
 
-
-@router.post("/users/refresh_token")
-async def refresh_access_token(body: dict = Body(...), db: Session = Depends(get_db)):
-    refresh_token = body.get("refresh_token", "")
-    user = verify_refresh_token(refresh_token, db)
-    if not user:
-        raise HTTPException(
-            status_code=403, detail="Refresh token is invalid or expired")
-
-    new_access_token = create_access_token(data={"sub": user.email})
-    return {
-        "access_token": new_access_token,
-        "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    }

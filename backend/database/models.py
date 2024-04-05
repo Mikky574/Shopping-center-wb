@@ -12,26 +12,6 @@ class User(Base):
     info = relationship("UserInfo", back_populates="user",
                         uselist=False)  # 与UserInfo建立一对一关系
 
-
-# class TokenBlacklist(Base):
-#     __tablename__ = "token_blacklist"
-#     id = Column(Integer, primary_key=True, autoincrement=True)
-#     token = Column(String, nullable=False, unique=True)
-#     created_at = Column(DateTime, default=datetime.now(timezone.utc))
-#     expires_in = Column(Integer, nullable=False)
-
-#     def __repr__(self):
-#         return f"<TokenBlacklist(token='{self.token}', created_at={self.created_at}, expires_in={self.expires_in})>"
-
-class TokenBlacklist(Base):
-    __tablename__ = "token_blacklist"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    token = Column(String, nullable=False, unique=True)
-    expires_at = Column(Integer, nullable=False)  # 使用整数存储失效时间戳
-
-    def __repr__(self):
-        return f"<TokenBlacklist(token='{self.token}', expires_at={self.expires_at})>"
-
 class UserInfo(Base):
     __tablename__ = "user_info"
     id = Column(Integer, primary_key=True, index=True)

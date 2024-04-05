@@ -29,14 +29,23 @@ for frontend_dist in frontend_dist_dirs:
     class CachedStaticFiles(StaticFiles):
         def file_response(self, *args: Any, **kwargs: Any):
             resp = super().file_response(*args, **kwargs)
+            # if self.directory is not None and isinstance(resp, FileResponse):
+            #     if (Path(self.directory) / 'assets') in Path(resp.path).parents:
+            #         if resp.headers.get('Cache-Control'):
+            #             print(resp.headers.get('Cache-Control'))
+            #         resp.headers['Cache-Control'] = (
+            #             'public, max-age=31536000, immutable, '
+            #             + resp.headers.get('Cache-Control', '')
+            #         )
             if self.directory is not None and isinstance(resp, FileResponse):
                 if (Path(self.directory) / 'assets') in Path(resp.path).parents:
-                    if resp.headers.get('Cache-Control'):
-                        print(resp.headers.get('Cache-Control'))
-                    resp.headers['Cache-Control'] = (
-                        'public, max-age=31536000, immutable, '
-                        + resp.headers.get('Cache-Control', '')
-                    )
+                    existing_cache_control = resp.headers.get('Cache-Control')
+                    additional_cache_control = 'public, max-age=31536000, immutable'
+                    # 如果原来的 Cache-Control 头部存在，则在其基础上追加
+                    if existing_cache_control:
+                        resp.headers['Cache-Control'] = existing_cache_control + ", " + additional_cache_control
+                    else:
+                        resp.headers['Cache-Control'] = additional_cache_control
             return resp
 
     app.mount(
