@@ -101,25 +101,6 @@ class PasswordResetForm(BaseModel):
     old_password: str
     new_password: str
 
-@router.post("/users/reset_password")
-async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == form_data.email).first()
-
-    # 检查用户是否存在
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # 验证旧密码
-    if not verify_password(form_data.old_password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect password")
-
-    # 更新密码
-    user.hashed_password = hash_password(form_data.new_password)
-    db.commit()
-
-    return {"message": "Password updated successfully."}
-
-
 @router.post("/users/login")
 async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
     user_email = form_data.email
@@ -145,18 +126,35 @@ async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 3h的分钟数
     }
 
+@router.post("/users/reset_password")
+async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == form_data.email).first()
+
+    # 检查用户是否存在
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 验证旧密码
+    if not verify_password(form_data.old_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect password")
+
+    # 更新密码
+    user.hashed_password = hash_password(form_data.new_password)
+    db.commit()
+
+    return {"message": "Password updated successfully."}
 
 @router.post("/users/logout")
 async def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
     # 假设AccTokenMapping有一个字段表示令牌是否有效，如is_active
     # 首先验证令牌
     email, is_token_expired = verify_token(token)
-    if email is None or is_token_expired:
+    if is_token_expired: #email is None or 
         # 如果令牌无效或已过期，直接返回提示信息
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is invalid or expired",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Token is expired",
+            # headers={"WWW-Authenticate": "Bearer"},
         )
     
     # 直接删除与当前访问令牌相关的记录
@@ -192,7 +190,7 @@ async def read_user_me(current_user: User = Depends(get_current_user), db: Sessi
 
 @router.post("/users/refresh_token")
 async def refresh_access_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
-    email,is_token_expired = verify_token(token)  # 验证acc是否有效    
+    email,is_token_expired = verify_token(token)  # 验证acc是否有效
     token_data = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first()
     if not token_data :
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is invalid or expired")

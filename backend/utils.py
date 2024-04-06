@@ -120,7 +120,7 @@ def verify_token(token: str) -> Tuple[Optional[str], bool]:
         if email is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token is invalid, no subject found",
+                detail="Token is invalid",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         # 检查令牌是否真的过期
@@ -150,13 +150,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not email:
-        # 如果没有提供有效的电子邮件，即令牌无效，抛出另一个异常
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # if not email:
+    #     # 如果没有提供有效的电子邮件，即令牌无效，抛出另一个异常
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Invalid authentication credentials",
+    #         headers={"WWW-Authenticate": "Bearer"},
+    #     )
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
