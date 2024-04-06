@@ -62,6 +62,7 @@ async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
         # 检查邮箱是否已经注册
         existing_user = db.query(User).filter(User.email == user.email).first()
         if existing_user:
+            print("y")
             raise HTTPException(
                 status_code=400, detail="Email already registered") # 邮箱已被注册
         
@@ -172,7 +173,7 @@ async def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends
         )
 
 
-@router.get("/me", response_model=UserMe)
+@router.get("/users/me", response_model=UserMe)
 async def read_user_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user_info = db.query(UserInfo).filter(
         UserInfo.user_id == current_user.id).first()
@@ -205,7 +206,7 @@ async def refresh_access_token(token: str = Depends(oauth2_scheme), db: Session 
 
     # 删除与当前访问令牌相关的记录
     delete_specific_token_record(db, token)
-    
+
     new_refresh_token, new_exp_at = refresh_token_logic(db, token_data, email)
 
     # 生成新的访问令牌并存储新的令牌信息
