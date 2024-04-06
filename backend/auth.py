@@ -1,15 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 # from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from database import User, UserInfo
+from database import User, UserInfo,AccTokenMapping
 from utils import (
+    oauth2_scheme,
     hash_password,
     check_username_and_password,
     create_access_token,
+    create_refresh_token,
     get_current_user,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_db,
-    verify_password)
+    verify_password,
+    verify_token,
+    store_token_info,
+    refresh_token_logic,
+    handle_refresh_token_expiration,
+    generate_and_store_tokens,
+    delete_specific_token_record)
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
 from fastapi import HTTPException, APIRouter, Depends
@@ -55,7 +63,11 @@ async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
         existing_user = db.query(User).filter(User.email == user.email).first()
         if existing_user:
             raise HTTPException(
-                status_code=400, detail="Email already registered")
+                status_code=400, detail="Email already registered") # 邮箱已被注册
+        
+        if not user.first_name and not user.last_name and not user.phone_number:
+            raise HTTPException(
+                status_code=422, detail="At least one of the following must be provided: first_name, last_name, phone_number")
 
         # 加密密码
         hashed_password = hash_password(user.password)
@@ -69,9 +81,9 @@ async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
         # 总是创建UserInfo实例，即使信息部分为空
         db_user_info = UserInfo(
             user_id=new_user.id,
-            first_name=user.first_name if user.first_name else "",  # 如果提供了信息，则使用提供的信息，否则使用空字符串
-            last_name=user.last_name if user.last_name else "",  # 同上
-            phone_number=user.phone_number if user.phone_number else ""  # 同上
+            first_name=user.first_name, # if user.first_name else "",  # 如果提供了信息，则使用提供的信息，否则使用空字符串
+            last_name=user.last_name, # if user.last_name else "",  # 同上
+            phone_number=user.phone_number, # if user.phone_number else ""  # 同上
         )
         db.add(db_user_info)
         db.commit()
@@ -79,7 +91,7 @@ async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
         # 只返回HTTP状态码200，表示成功，不返回用户信息
         return {"message": "User registered successfully."}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) # 关键词缺少
 
 from pydantic import BaseModel, EmailStr
 
@@ -88,7 +100,7 @@ class PasswordResetForm(BaseModel):
     old_password: str
     new_password: str
 
-@router.post("/users/reset-password")
+@router.post("/users/reset_password")
 async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.email).first()
 
@@ -120,16 +132,48 @@ async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="User is disabled")
 
     access_token = create_access_token(data={"sub": user_email})
+    # 同时要生成一个刷新令牌，进入数据库保存
+    refresh_token = create_refresh_token(data={"sub": user_email})
+    # 计算刷新令牌的过期时间戳
+    store_token_info(access_token=access_token, refresh_token=refresh_token,db=db) # 存到数据库里面
+
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 7天的秒数
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 3h的分钟数
     }
 
 
+@router.post("/users/logout")
+async def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
+    # 假设AccTokenMapping有一个字段表示令牌是否有效，如is_active
+    # 首先验证令牌
+    email, is_token_expired = verify_token(token)
+    if email is None or is_token_expired:
+        # 如果令牌无效或已过期，直接返回提示信息
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is invalid or expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 直接删除与当前访问令牌相关的记录
+    token_record = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first()
+    if token_record:
+        db.delete(token_record)
+        db.commit()
+        return {"message": "You have been logged out."}
+    else:
+        # 如果找不到令牌记录，可能是因为它已被删除或从未存在
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Token record not found",
+        )
+
+
 @router.get("/me", response_model=UserMe)
-def read_user_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def read_user_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user_info = db.query(UserInfo).filter(
         UserInfo.user_id == current_user.id).first()
     if user_info:
@@ -144,3 +188,31 @@ def read_user_me(current_user: User = Depends(get_current_user), db: Session = D
         raise HTTPException(
             status_code=404, detail="User information not found")
 
+
+@router.post("/users/refresh_token")
+async def refresh_access_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
+    email,is_token_expired = verify_token(token)  # 验证acc是否有效    
+    token_data = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first()
+    if not token_data :
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is invalid or expired")
+
+    if not is_token_expired:
+        return {
+            "access_token": token,  # 直接返回现有的访问令牌
+            "token_type": "bearer",
+            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES  # 可选：计算剩余有效时间
+        }
+
+    # 删除与当前访问令牌相关的记录
+    delete_specific_token_record(db, token)
+    
+    new_refresh_token, new_exp_at = refresh_token_logic(db, token_data, email)
+
+    # 生成新的访问令牌并存储新的令牌信息
+    new_access_token = generate_and_store_tokens(db, email, new_refresh_token, new_exp_at)
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES
+    }

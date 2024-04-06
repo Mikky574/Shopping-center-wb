@@ -20,3 +20,14 @@ class UserInfo(Base):
     last_name = Column(String)  # 姓
     phone_number = Column(String)  # 电话号码
     user = relationship("User", back_populates="info")  # 建立与User的反向关系
+
+
+class AccTokenMapping(Base):
+    __tablename__ = 'acc_token_mapping'
+
+    access_token = Column(String, primary_key=True, index=True)
+    refresh_token = Column(String, nullable=False)
+    exp_at = Column(Integer, nullable=False)  # 使用Integer来存储时间戳
+
+    def __repr__(self):
+        return f"<TokenMapping(access_token='{self.access_token}', refresh_token='{self.refresh_token}', exp_at={self.exp_at})>"

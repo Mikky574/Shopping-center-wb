@@ -37,6 +37,7 @@
 - **成功响应体**:
   - `access_token` (str): 授权令牌
   - `token_type` (str): 令牌类型，固定值"bearer"
+  - `expires_in` (int): 令牌过期时间，默认acc为3h，单位为分钟
 - **失败响应**:
   - `400 Bad Request`: 邮箱或密码错误
   - `403 Forbidden`: 用户被禁用
@@ -75,7 +76,7 @@
 - **成功响应体**:
   - `access_token` (str): 新的授权令牌
   - `token_type` (str): 令牌类型，固定值"bearer"
-  - `expires_in` (int): 授权令牌有效期（秒），默认为1800秒（30分钟）
+  - `expires_in` (int): 授权令牌有效期（秒），令牌过期时间，默认acc为3h，单位为分钟
 - **失败响应**:
   - `401 Unauthorized`: 刷新令牌无效
   - `403 Forbidden`: 刷新令牌已过期或在黑名单中
