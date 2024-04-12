@@ -1,7 +1,8 @@
+# 和登录有关的在这里叭
 from fastapi import APIRouter, Depends, HTTPException, status
 # from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from database import User, UserInfo,AccTokenMapping
+
 from utils import (
     oauth2_scheme,
     hash_password,
@@ -18,6 +19,7 @@ from utils import (
     handle_refresh_token_expiration,
     generate_and_store_tokens,
     delete_specific_token_record)
+from database import User, UserInfo,AccTokenMapping
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
 from fastapi import HTTPException, APIRouter, Depends
@@ -55,8 +57,9 @@ class UserMe(BaseModel):
 
 
 router = APIRouter()
+# router = APIRouter(prefix="/users")  # 添加路由前缀
 
-@router.post("/users/register", status_code=status.HTTP_200_OK)
+@router.post("/register", status_code=status.HTTP_200_OK)
 async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
     try:
         # 检查邮箱是否已经注册
@@ -101,7 +104,7 @@ class PasswordResetForm(BaseModel):
     old_password: str
     new_password: str
 
-@router.post("/users/login")
+@router.post("/login")
 async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
     user_email = form_data.email
     password = form_data.password
@@ -126,7 +129,7 @@ async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 3h的分钟数
     }
 
-@router.post("/users/reset_password")
+@router.post("/reset_password")
 async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.email).first()
 
@@ -144,7 +147,7 @@ async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get
 
     return {"message": "Password updated successfully."}
 
-@router.post("/users/logout")
+@router.post("/logout")
 async def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
     # 假设AccTokenMapping有一个字段表示令牌是否有效，如is_active
     # 首先验证令牌
@@ -171,7 +174,7 @@ async def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends
         )
 
 
-@router.get("/users/me", response_model=UserMe)
+@router.get("/me", response_model=UserMe)
 async def read_user_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user_info = db.query(UserInfo).filter(
         UserInfo.user_id == current_user.id).first()
@@ -188,7 +191,7 @@ async def read_user_me(current_user: User = Depends(get_current_user), db: Sessi
             status_code=404, detail="User information not found")
 
 
-@router.post("/users/refresh_token")
+@router.post("/refresh_token")
 async def refresh_access_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
     email,is_token_expired = verify_token(token)  # 验证acc是否有效
     token_data = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first()

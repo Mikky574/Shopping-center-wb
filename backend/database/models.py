@@ -11,23 +11,106 @@ class User(Base):
     disabled = Column(Boolean, default=False)  # 用户是否被禁用
     info = relationship("UserInfo", back_populates="user",
                         uselist=False)  # 与UserInfo建立一对一关系
+    
+    #################################################
+    # todo: 一对多关系 -> Cart
+    # todo: 一对多关系 -> Order
+    # todo: 一对多关系 -> PaymentInfo
+    carts = relationship("Cart", back_populates="user")
+    orders = relationship("Order", back_populates="user")
+    payment_infos = relationship("PaymentInfo", back_populates="user")
+    #################################################
 
 class UserInfo(Base):
     __tablename__ = "user_info"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'), unique=True)
-    first_name = Column(String)  # 名
-    last_name = Column(String)  # 姓
-    phone_number = Column(String)  # 电话号码
+    user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=False)  
+    first_name = Column(String, nullable=False)  # 名
+    last_name = Column(String, nullable=False)  # 姓
+    phone_number = Column(String, nullable=False)  # 电话号码
     user = relationship("User", back_populates="info")  # 建立与User的反向关系
+    currency_id = Column(Integer, ForeignKey('currency.id'))  
+    payment_info = Column(String, ForeignKey('payment_info.id'), nullable=True)
 
+class Currency(Base):
+    __tablename__ = 'currency'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    symbol = Column(String(1), unique=True, nullable=False)
 
 class AccTokenMapping(Base):
     __tablename__ = 'acc_token_mapping'
-
-    access_token = Column(String, primary_key=True, index=True)
+    access_token = Column(String, primary_key=True, nullable=False)
     refresh_token = Column(String, nullable=False)
     exp_at = Column(Integer, nullable=False)  # 使用Integer来存储时间戳
 
-    def __repr__(self):
-        return f"<TokenMapping(access_token='{self.access_token}', refresh_token='{self.refresh_token}', exp_at={self.exp_at})>"
+import enum
+from sqlalchemy import Enum
+
+class PaymentTypeEnum(enum.Enum):
+    bank = 'bank'
+    check = 'check'
+    paypal = 'paypal'
+ 
+class PaymentInfo(Base):
+    __tablename__ = 'payment_info'
+    id = Column(Integer, primary_key=True) 
+    user_id = Column(Integer, ForeignKey('users.id'), index=True, nullable=False)
+    payment_type = Column(Enum(PaymentTypeEnum), nullable=False)
+    info = Column(String, nullable=False)
+    # todo：反向一对多关系 -> User
+    user = relationship("User", back_populates="payment_infos")
+
+class Address(Base):
+    __tablename__ = 'address'
+    id = Column(Integer, primary_key=True)
+    user_id =  Column(Integer, ForeignKey('users.id'), nullable=False)
+    address_1 = Column(String, nullable=False)
+    address_2 = Column(String, nullable=False)
+    address_3 = Column(String, nullable=True)
+    city_state = Column(String, nullable=False) 
+    zip = Column(String, nullable=False)
+    country = Column(String, nullable=False)
+
+class Product(Base):
+    __tablename__ = 'product'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    price = Column(Integer, nullable=False)
+    currency_id = Column(Integer, ForeignKey('currency.id'), nullable=False) 
+    quantity = Column(Integer, nullable=False)
+    weight_grams = Column(Integer, nullable=False)
+    image_path = Column(String, nullable=False)
+    # todo：反向多对一关系 -> Cart
+    # todo：反向多对一关系 -> Order
+    carts = relationship("Cart", back_populates="product")
+    orders = relationship("Order", back_populates="product")
+
+class Cart(Base):
+    __tablename__ = 'cart'
+    id = Column(Integer, primary_key=True)
+    user_id =  Column(Integer, ForeignKey('users.id'), index=True, nullable=False)
+    product_id = Column(Integer, ForeignKey('product.id'), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    # todo：反向一对多关系 -> User
+    # todo：多对一关系 -> Product
+    user = relationship("User", back_populates="carts")
+    product = relationship("Product", back_populates="carts")
+
+from sqlalchemy.sql.functions import now
+class Order(Base):
+    __tablename__ = 'order'
+    id = Column(Integer, primary_key=True)
+    user_id =  Column(Integer, ForeignKey('users.id'), index=True, nullable=False)
+    order_time = Column(DateTime, default=now())
+    invoice_id = Column(String, nullable=True) 
+    total = Column(Integer, nullable=False)
+    currency_id = Column(Integer, ForeignKey('currency.id'), nullable=False) 
+    payment_info = Column(String, ForeignKey('payment_info.id'), nullable=True)
+    # todo：反向一对多关系 -> User
+    # todo：多对一关系 -> Product
+    user = relationship("User", back_populates="orders")
+    product_id = Column(Integer, ForeignKey('product.id'))
+    product = relationship("Product", back_populates="orders")
+    

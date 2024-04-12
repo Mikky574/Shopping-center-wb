@@ -160,8 +160,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        # 如果无法根据电子邮件找到用户，抛出用户未找到的异常
-        raise HTTPException(status_code=404, detail="User not found")
+        # # 如果无法根据电子邮件找到用户，抛出用户未找到的异常
+        # raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return user
 

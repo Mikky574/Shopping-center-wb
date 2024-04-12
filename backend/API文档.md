@@ -58,7 +58,7 @@
 - **失败响应**:
   - `401 Unauthorized`: `detail:{"Token has expired"}` 令牌过期
   - `401 Unauthorized`: `detail:{"Token is invalid"}` 令牌无效
-  - `404 Not Found`: `detail:{"User not found"}` 未找到用户，邮箱可能未注册。
+  - `401 Unauthorized`: `detail:{"User not found"}` 未找到用户，邮箱可能未注册。
   - `404 Not Found`: `detail:{"User information not found"}` 未找到用户信息。 (注释：暂时没有触发条件，目前不会被触发)
 
 #### **4. 用户登出**
@@ -103,8 +103,10 @@
 - **失败响应**:
   - `404 Not Found`: `detail:{"User not found"}` 未找到用户，邮箱可能未注册。
   - `400 Bad Request`: `detail:{"Incorrect password"}` 旧密码不正确或请求体格式错误。
-
 - 后端我没限定旧密码一定得要和新密码不同
+
+
+
 
 <!-- 数据库还在改 -->
 
