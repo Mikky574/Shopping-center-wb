@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey,DateTime
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey,DateTime,Numeric
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime, timezone
@@ -19,6 +19,7 @@ class User(Base):
     carts = relationship("Cart", back_populates="user")
     orders = relationship("Order", back_populates="user")
     payment_infos = relationship("PaymentInfo", back_populates="user")
+    addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
     #################################################
 
 class UserInfo(Base):
@@ -61,27 +62,15 @@ class PaymentInfo(Base):
     # todo：反向一对多关系 -> User
     user = relationship("User", back_populates="payment_infos")
 
-class Address(Base):
-    __tablename__ = 'address'
-    id = Column(Integer, primary_key=True)
-    user_id =  Column(Integer, ForeignKey('users.id'), nullable=False)
-    address_1 = Column(String, nullable=False)
-    address_2 = Column(String, nullable=False)
-    address_3 = Column(String, nullable=True)
-    city_state = Column(String, nullable=False) 
-    zip = Column(String, nullable=False)
-    country = Column(String, nullable=False)
-
 class Product(Base):
     __tablename__ = 'product'
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)  # 根据类型定义，ID 是字符串
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    price = Column(Integer, nullable=False)
-    currency_id = Column(Integer, ForeignKey('currency.id'), nullable=False) 
-    quantity = Column(Integer, nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)  # 使用 Numeric 类型支持小数点
+    currency_symbol = Column(String, nullable=False)
     weight_grams = Column(Integer, nullable=False)
-    image_path = Column(String, nullable=False)
+    image_url = Column(String, nullable=False)  # 存储图片的 URL
     # todo：反向多对一关系 -> Cart
     # todo：反向多对一关系 -> Order
     carts = relationship("Cart", back_populates="product")
@@ -114,3 +103,18 @@ class Order(Base):
     product_id = Column(Integer, ForeignKey('product.id'))
     product = relationship("Product", back_populates="orders")
     
+
+## 地址部分
+
+class Address(Base):
+    __tablename__ = 'address'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    address_1 = Column(String, nullable=False)
+    address_2 = Column(String, nullable=False)
+    address_3 = Column(String, nullable=True)
+    city_state = Column(String, nullable=False)
+    zip = Column(String, nullable=False)
+    country = Column(String, nullable=False)
+    user = relationship("User", back_populates="addresses")
+

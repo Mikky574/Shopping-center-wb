@@ -14,7 +14,7 @@ class CartItem(BaseModel):
 class CartUpdateItem(BaseModel):
     amount: int
 
-@router.get("/", response_model=List[CartItem])
+@router.get("", response_model=List[CartItem])
 async def view_cart_items(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # if not current_user:
     #     raise HTTPException(status_code=401, detail="Token is invalid")

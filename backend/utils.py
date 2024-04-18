@@ -170,12 +170,20 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     return user
 
-def handle_refresh_token_expiration(db: Session, email: str, token_data: AccTokenMapping) -> Tuple[str, int]:
+def handle_refresh_token_expiration(db: Session, email: str) -> Tuple[str, int]:
     """处理刷新令牌即将过期的情况，返回新的刷新令牌和过期时间。"""
 
-    # 如果刷新令牌即将过期（少于24小时），生成新的刷新令牌
+    # 使用现有的逻辑生成新的刷新令牌
     new_refresh_token = create_refresh_token(data={"sub": email})
     new_exp_at = int((datetime.now(timezone.utc) + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)).timestamp())
+
+    # 更新数据库中的令牌信息
+    db.query(AccTokenMapping).filter(AccTokenMapping.email == email).update({
+        AccTokenMapping.refresh_token: new_refresh_token,
+        AccTokenMapping.exp_at: new_exp_at
+    })
+    db.commit()
+
     return new_refresh_token, new_exp_at
 
 def refresh_token_logic(db: Session, token_data: AccTokenMapping, email: str) -> (str, int):

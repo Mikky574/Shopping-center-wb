@@ -16,7 +16,6 @@ from utils import (
     verify_token,
     store_token_info,
     refresh_token_logic,
-    handle_refresh_token_expiration,
     generate_and_store_tokens,
     delete_specific_token_record)
 from database import User, UserInfo,AccTokenMapping
@@ -97,7 +96,7 @@ async def register_user(user: RegisterUser, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) # 关键词缺少
 
-from pydantic import BaseModel, EmailStr
+# from pydantic import BaseModel, EmailStr
 
 class PasswordResetForm(BaseModel):
     email: EmailStr
@@ -218,3 +217,78 @@ async def refresh_access_token(token: str = Depends(oauth2_scheme), db: Session 
         "token_type": "bearer",
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES
     }
+
+
+# address信息
+
+# from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from database import Address, User
+# from utils import get_db, get_current_user
+from typing import List, Optional
+
+class AddressBase(BaseModel):
+    address_1: str
+    address_2: str
+    address_3: Optional[str] = None
+    city_state: str
+    zip: str
+    country: str
+
+class AddressCreate(AddressBase):
+    pass
+
+class AddressUpdate(AddressBase):
+    pass
+
+class AddressResponse(AddressBase):
+    id: int
+
+# 新挂一个api
+router_addresses = APIRouter()
+
+@router_addresses.get("", response_model=List[AddressResponse])
+async def read_addresses(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    addresses = db.query(Address).filter(Address.user_id == current_user.id).all()
+    return addresses
+
+@router_addresses.post("", response_model=AddressResponse, status_code=201)
+async def add_address(address: AddressCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    new_address = Address(**address.dict(), user_id=current_user.id)
+    db.add(new_address)
+    db.commit()
+    db.refresh(new_address)
+    return new_address
+
+
+@router_addresses.get("/{address_id}", response_model=AddressResponse)
+async def read_address_detail(address_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    address = db.query(Address).filter(Address.id == address_id, Address.user_id == current_user.id).first()
+    if not address:
+        raise HTTPException(status_code=404, detail="Address not found")
+    return address
+
+
+@router_addresses.patch("/{address_id}", response_model=AddressResponse)
+async def update_address(address_id: int, address: AddressUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    existing_address = db.query(Address).filter(Address.id == address_id, Address.user_id == current_user.id).first()
+    if not existing_address:
+        raise HTTPException(status_code=404, detail="Address not found")
+    for key, value in address.dict().items():
+        setattr(existing_address, key, value)
+    db.commit()
+    return existing_address
+
+@router_addresses.delete("/{address_id}", response_model=dict)
+async def delete_address(address_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    address = db.query(Address).filter(Address.id == address_id, Address.user_id == current_user.id).first()
+    if not address:
+        raise HTTPException(status_code=404, detail="Address not found")
+    db.delete(address)
+    db.commit()
+    return {"message": "Address deleted successfully"}
+
+router.include_router(router_addresses, prefix="/addresses", tags=["addresses"]) # 挂上去
