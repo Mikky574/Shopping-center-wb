@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey,DateTime,Numeric
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey,DECIMAL, Date,DateTime,Numeric
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime, timezone
@@ -62,19 +62,46 @@ class PaymentInfo(Base):
     # todo：反向一对多关系 -> User
     user = relationship("User", back_populates="payment_infos")
 
+#################################
+
+# class Product(Base):
+#     __tablename__ = 'product'
+#     id = Column(String, primary_key=True)  # 根据类型定义，ID 是字符串
+#     name = Column(String, nullable=False)
+#     description = Column(String, nullable=False)
+#     price = Column(Numeric(10, 2), nullable=False)  # 使用 Numeric 类型支持小数点
+#     currency_symbol = Column(String, nullable=False)
+#     weight_grams = Column(Integer, nullable=False)
+#     image_url = Column(String, nullable=False)  # 存储图片的 URL
+#     # todo：反向多对一关系 -> Cart
+#     # todo：反向多对一关系 -> Order
+#     carts = relationship("Cart", back_populates="product")
+#     orders = relationship("Order", back_populates="product")
+
 class Product(Base):
     __tablename__ = 'product'
-    id = Column(String, primary_key=True)  # 根据类型定义，ID 是字符串
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=False)
-    price = Column(Numeric(10, 2), nullable=False)  # 使用 Numeric 类型支持小数点
-    currency_symbol = Column(String, nullable=False)
-    weight_grams = Column(Integer, nullable=False)
-    image_url = Column(String, nullable=False)  # 存储图片的 URL
+    
+    id = Column(Integer, primary_key=True, index=True)  # 使用oc_product的product_id作为主键
+    model = Column(String(64), nullable=False)
+    sku = Column(String(64), nullable=True)  # SKU 可能不是必须的，可以设置为 nullable
+    mpn = Column(String(64), nullable=True)  # 同上
+    quantity = Column(Integer, nullable=False, default=0)
+    stock_status_id = Column(Integer, nullable=True)  # 如果这是一个外键，需要添加ForeignKey
+    image_url = Column(String(255), nullable=True)  # 存储图片URL，转换为完整的URL路径
+    manufacturer_id = Column(Integer, nullable=True)  # 如果这是一个外键，需要添加ForeignKey
+    price = Column(DECIMAL(15, 4), nullable=False)
+    date_available = Column(Date, nullable=False)
+    weight_grams = Column(DECIMAL(15, 8), nullable=False)  # 需要转换成克
+    viewed = Column(Integer, nullable=False, default=0)
+    date_added = Column(DateTime, nullable=False)
+    date_modified = Column(DateTime, nullable=False)
+    
     # todo：反向多对一关系 -> Cart
     # todo：反向多对一关系 -> Order
     carts = relationship("Cart", back_populates="product")
     orders = relationship("Order", back_populates="product")
+
+#####################################################
 
 class Cart(Base):
     __tablename__ = 'cart'
