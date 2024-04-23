@@ -291,4 +291,4 @@ async def delete_address(address_id: int, current_user: User = Depends(get_curre
     db.commit()
     return {"message": "Address deleted successfully"}
 
-router.include_router(router_addresses, prefix="/addresses", tags=["addresses"]) # 挂上去
+router.include_router(router_addresses, prefix="/addresses", tags=["users"]) # 挂上去
