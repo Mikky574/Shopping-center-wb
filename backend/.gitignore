@@ -21,7 +21,7 @@ venv
 docs.zip
 archive.zip
 catalog/*
-!catalog/
+!catalog/.gitkeep
 
 # vim temporary files
 *~
