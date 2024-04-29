@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, ForeignKey,DECIMAL, Date,DateTime,Numeric
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey,DECIMAL, Date,DateTime,Numeric,Text
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime, timezone
@@ -86,20 +86,34 @@ class Product(Base):
     sku = Column(String(64), nullable=True)  # SKU 可能不是必须的，可以设置为 nullable
     mpn = Column(String(64), nullable=True)  # 同上
     quantity = Column(Integer, nullable=False, default=0)
-    stock_status_id = Column(Integer, nullable=True)  # 如果这是一个外键，需要添加ForeignKey
+    # stock_status_id = Column(Integer, nullable=True)  # 如果这是一个外键，需要添加ForeignKey
     image_url = Column(String(255), nullable=True)  # 存储图片URL，转换为完整的URL路径
-    manufacturer_id = Column(Integer, nullable=True)  # 如果这是一个外键，需要添加ForeignKey
+    # manufacturer_id = Column(Integer, nullable=True)  # 如果这是一个外键，需要添加ForeignKey
     price = Column(DECIMAL(15, 4), nullable=False)
-    date_available = Column(Date, nullable=False)
+    # date_available = Column(Date, nullable=False)
     weight_grams = Column(DECIMAL(15, 8), nullable=False)  # 需要转换成克
     viewed = Column(Integer, nullable=False, default=0)
-    date_added = Column(DateTime, nullable=False)
-    date_modified = Column(DateTime, nullable=False)
+    # date_added = Column(DateTime, nullable=False)
+    # date_modified = Column(DateTime, nullable=False)
     
     # todo：反向多对一关系 -> Cart
     # todo：反向多对一关系 -> Order
     carts = relationship("Cart", back_populates="product")
     orders = relationship("Order", back_populates="product")
+
+    descriptions = relationship("ProductDescribe", back_populates="product")  # 反向多对一关系
+
+
+class ProductDescribe(Base):
+    __tablename__ = 'product_describe'
+    
+    id = Column(Integer, primary_key=True, index=True)  # 主键
+    product_id = Column(Integer, ForeignKey('product.id'), nullable=False)  # 关联 Product 表
+    # language_id = Column(Integer, nullable=False)  # 语言 ID
+    name = Column(String(255), nullable=False)  # 产品名称
+    description = Column(Text, nullable=False)  # 详细描述
+
+    product = relationship("Product", back_populates="descriptions")  # 与 Product 表建立关系
 
 #####################################################
 
@@ -115,6 +129,7 @@ class Cart(Base):
     product = relationship("Product", back_populates="carts")
 
 from sqlalchemy.sql.functions import now
+
 class Order(Base):
     __tablename__ = 'order'
     id = Column(Integer, primary_key=True)

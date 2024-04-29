@@ -1,45 +1,97 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import Product
+from sqlalchemy import desc
+from database import Product, ProductDescribe
 from utils import get_db
 from typing import List
-from datetime import datetime
-
 from pydantic import BaseModel
 
 # Pydantic模型用于响应格式化
 class ProductModel(BaseModel):
-    id: int
-    model: str
-    sku: str
-    mpn: str
-    quantity: int
-    stock_status_id: int
-    image_url: str
-    manufacturer_id: int
-    price: float
-    date_available: datetime
-    weight_grams: float
-    viewed: int
-    date_added: datetime
-    date_modified: datetime
-
+    id: int # 
+    model: str # 只需要这个作为产品名称
+    # sku: str
+    # mpn: str
+    quantity: int # 库存容量
+    # stock_status_id: int
+    image_url: str # 首个产品的图片。先这样，后面会改为list
+    # manufacturer_id: int
+    price: float # 价格
+    # 这些是Product表的
+    ###########################
+    # 这些是ProductDescribe表的
+    name: str
+    description:str
     class Config:
-        orm_mode = True  # 允许将ORM模型转换为Pydantic模型
+        from_attributes = True  # 替代原来的 orm_mode
 
 
 router = APIRouter()
 
-# @router.get("/products/{product_id}", response_model=Product)
-# async def get_product(product_id: str, db: Session = Depends(get_db)):
-#     product = db.query(Product).filter(Product.id == product_id).first()
+# @router.get("/{product_id}", response_model=ProductModel)
+# async def get_product(product_id: int, db: Session = Depends(get_db)):
+#     product = db.query(Product, ProductDescribe.name, ProductDescribe.description)\
+#                 .join(ProductDescribe, Product.id == ProductDescribe.product_id)\
+#                 .filter(Product.id == product_id).first()
 #     if not product:
 #         raise HTTPException(status_code=404, detail="Product not found")
+#     # 直接返回数据库模型实例，由 Pydantic 负责转换
 #     return product
+@router.get("/product/{product_id}", response_model=ProductModel)
+async def get_product(product_id: int, db: Session = Depends(get_db)):
+    # Fetching product details including description using join
+    result = db.query(Product.id, Product.model, Product.quantity, Product.image_url,
+                      Product.price, ProductDescribe.name, ProductDescribe.description)\
+               .join(ProductDescribe, Product.id == ProductDescribe.product_id)\
+               .filter(Product.id == product_id).first()
 
-@router.get("/{product_id}", response_model=ProductModel)
-async def get_product(product_id: int, db: Session = Depends(get_db)):  # product_id 应为 int 类型
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
+    if not result:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product
+
+    # Mapping query results to dictionary that matches Pydantic model
+    product = {
+        "id": result[0],  # product.id
+        "model": result[1],  # product.model
+        "quantity": result[2],  # product.quantity
+        "image_url": result[3],  # product.image_url
+        "price": result[4],  # product.price
+        "name": result[5],  # product_describe.name
+        "description": result[6]  # product_describe.description
+    }
+
+    return ProductModel(**product)  # Creating a Pydantic model instance with unpacked data
+
+
+# 放到这里下面
+
+# 简化的 Pydantic 模型，只包含需要的字段
+class SimpleProductModel(BaseModel):
+    id: int
+    img_url: str
+    name: str
+    model: str
+
+    class Config:
+        from_attributes = True  # 替代原来的 orm_mode
+
+
+@router.get("/popular", response_model=List[SimpleProductModel])
+async def get_popular_products(db: Session = Depends(get_db)):
+    # 从数据库查询访问次数最多的前八个商品，并包含产品ID
+    popular_products = db.query(
+        Product.id.label("id"),  # Including the product ID in the query
+        Product.image_url.label("img_url"),
+        Product.model,
+        ProductDescribe.name
+    ).join(
+        ProductDescribe, Product.id == ProductDescribe.product_id
+    ).order_by(
+        desc(Product.viewed)  # Sorting by the viewed count in descending order
+    ).limit(8).all()
+
+    if not popular_products:
+        raise HTTPException(status_code=404, detail="No popular products found")
+
+    # Mapping results into Pydantic models using list comprehension
+    return [SimpleProductModel(id=product.id, img_url=product.img_url, name=product.name, model=product.model) for product in popular_products]
+
