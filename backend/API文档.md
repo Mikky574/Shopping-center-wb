@@ -108,10 +108,10 @@
 
 
 ### **获取图像文件接口**
-- **路径**: `/api/image/catalog/{file_path:path}`
+- **路径**: `/api/image/{file_path:path(/catalog开头的图片路径)}`
 - **方法**: `GET`
 - **请求体**:
-  - `file_path` (路径参数，必须): 图像文件相对路径。
+  - `file_path` (路径参数，必须): 图像文件的路径，会检查，只响应catalog开头的。
   - `if_modified_since` (请求头，可选): 用于条件请求的时间戳，表示如果文件自指定时间以来未被修改，则返回304 Not Modified。
 
 - **成功响应**: `200 OK`
