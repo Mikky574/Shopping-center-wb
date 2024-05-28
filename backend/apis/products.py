@@ -5,6 +5,8 @@ from database import Product, ProductDescribe
 from utils import get_db
 from typing import List
 from pydantic import BaseModel
+from pathlib import Path
+import platform
 
 # Pydantic模型用于响应格式化
 class ProductModel(BaseModel):
@@ -29,15 +31,12 @@ class ProductModel(BaseModel):
 
 router = APIRouter()
 
-# @router.get("/{product_id}", response_model=ProductModel)
-# async def get_product(product_id: int, db: Session = Depends(get_db)):
-#     product = db.query(Product, ProductDescribe.name, ProductDescribe.description)\
-#                 .join(ProductDescribe, Product.id == ProductDescribe.product_id)\
-#                 .filter(Product.id == product_id).first()
-#     if not product:
-#         raise HTTPException(status_code=404, detail="Product not found")
-#     # 直接返回数据库模型实例，由 Pydantic 负责转换
-#     return product
+def correct_path(path_str: str) -> str:
+    parts = path_str.split('/')
+    corrected_parts = [part if not part.endswith(' ') else part[:-1] + '_' for part in parts]
+    corrected_path = '/'.join(corrected_parts)
+    return corrected_path
+
 @router.get("/id/{product_id}", response_model=ProductModel)
 async def get_product(product_id: int, db: Session = Depends(get_db)):
     # Fetching product details including description using join
@@ -48,13 +47,22 @@ async def get_product(product_id: int, db: Session = Depends(get_db)):
 
     if not result:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    # 检查操作系统
+    if platform.system() == "Windows":
+        image_url = correct_path(result[3])
+    else:
+        image_url = result[3]
+        
+    base_url = "/api/image"
+    image_url = str(Path(base_url) / image_url)
 
     # Mapping query results to dictionary that matches Pydantic model
     product = {
         "id": result[0],  # product.id
         "model": result[1],  # product.model
         "quantity": result[2],  # product.quantity
-        "image_url": result[3],  # product.image_url
+        "image_url": image_url, # result[3],  # product.image_url
         "price": result[4],  # product.price
         "name": result[5],  # product_describe.name
         "sold_count": result[6],
