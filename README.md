@@ -29,3 +29,6 @@ Laoshu-7700
 ```
 
 拆开成模块化的形式了,接口全在apis下面
+
+fastapi：
+uvicorn main:app --reload

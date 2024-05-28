@@ -11,7 +11,7 @@ router = APIRouter()
 base_dir = Path(__file__).resolve().parent.parent
 catalog_dir = base_dir / "catalog"
 
-@router.get("/cache/catalog/{file_path:path}")
+@router.get("/catalog/{file_path:path}")
 async def fetch_image(file_path: str, if_modified_since: str = Header(None)):
     file_location = catalog_dir / file_path
     if not file_location.exists() or not file_location.is_file():

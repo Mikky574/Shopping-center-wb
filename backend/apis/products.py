@@ -17,6 +17,7 @@ class ProductModel(BaseModel):
     image_url: str # 首个产品的图片。先这样，后面会改为list
     # manufacturer_id: int
     price: float # 价格
+    sold_count:int
     # 这些是Product表的
     ###########################
     # 这些是ProductDescribe表的
@@ -37,11 +38,11 @@ router = APIRouter()
 #         raise HTTPException(status_code=404, detail="Product not found")
 #     # 直接返回数据库模型实例，由 Pydantic 负责转换
 #     return product
-@router.get("/product/{product_id}", response_model=ProductModel)
+@router.get("/id/{product_id}", response_model=ProductModel)
 async def get_product(product_id: int, db: Session = Depends(get_db)):
     # Fetching product details including description using join
     result = db.query(Product.id, Product.model, Product.quantity, Product.image_url,
-                      Product.price, ProductDescribe.name, ProductDescribe.description)\
+                      Product.price, ProductDescribe.name, Product.viewed, ProductDescribe.description)\
                .join(ProductDescribe, Product.id == ProductDescribe.product_id)\
                .filter(Product.id == product_id).first()
 
@@ -56,7 +57,8 @@ async def get_product(product_id: int, db: Session = Depends(get_db)):
         "image_url": result[3],  # product.image_url
         "price": result[4],  # product.price
         "name": result[5],  # product_describe.name
-        "description": result[6]  # product_describe.description
+        "sold_count": result[6],
+        "description": result[7]  # product_describe.description
     }
 
     return ProductModel(**product)  # Creating a Pydantic model instance with unpacked data
@@ -64,34 +66,49 @@ async def get_product(product_id: int, db: Session = Depends(get_db)):
 
 # 放到这里下面
 
-# 简化的 Pydantic 模型，只包含需要的字段
-class SimpleProductModel(BaseModel):
-    id: int
-    img_url: str
-    name: str
-    model: str
+# # 简化的 Pydantic 模型，只包含需要的字段
+# class SimpleProductModel(BaseModel):
+#     id: int
+#     img_url: str
+#     name: str
+#     model: str
 
-    class Config:
-        from_attributes = True  # 替代原来的 orm_mode
+#     class Config:
+#         from_attributes = True  # 替代原来的 orm_mode
 
 
-@router.get("/popular", response_model=List[SimpleProductModel])
+# @router.get("/popular", response_model=List[SimpleProductModel])
+# async def get_popular_products(db: Session = Depends(get_db)):
+#     # 从数据库查询访问次数最多的前八个商品，并包含产品ID
+#     popular_products = db.query(
+#         Product.id.label("id"),  # Including the product ID in the query
+#         Product.image_url.label("img_url"),
+#         Product.model,
+#         ProductDescribe.name
+#     ).join(
+#         ProductDescribe, Product.id == ProductDescribe.product_id
+#     ).order_by(
+#         desc(Product.viewed)  # Sorting by the viewed count in descending order
+#     ).limit(8).all()
+
+#     if not popular_products:
+#         raise HTTPException(status_code=404, detail="No popular products found")
+
+#     # Mapping results into Pydantic models using list comprehension
+#     return [SimpleProductModel(id=product.id, img_url=product.img_url, name=product.name, model=product.model) for product in popular_products]
+
+@router.get("/popular", response_model=List[int])
 async def get_popular_products(db: Session = Depends(get_db)):
-    # 从数据库查询访问次数最多的前八个商品，并包含产品ID
-    popular_products = db.query(
-        Product.id.label("id"),  # Including the product ID in the query
-        Product.image_url.label("img_url"),
-        Product.model,
-        ProductDescribe.name
-    ).join(
-        ProductDescribe, Product.id == ProductDescribe.product_id
+    # 从数据库查询访问次数最多的前八个商品的ID
+    popular_product_ids = db.query(
+        Product.id
     ).order_by(
-        desc(Product.viewed)  # Sorting by the viewed count in descending order
+        desc(Product.viewed)  # 根据访问次数降序排序
     ).limit(8).all()
 
-    if not popular_products:
+    if not popular_product_ids:
         raise HTTPException(status_code=404, detail="No popular products found")
 
-    # Mapping results into Pydantic models using list comprehension
-    return [SimpleProductModel(id=product.id, img_url=product.img_url, name=product.name, model=product.model) for product in popular_products]
+    # 将查询结果中的ID提取出来形成一个列表
+    return [product_id[0] for product_id in popular_product_ids]
 

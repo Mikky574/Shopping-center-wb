@@ -108,7 +108,7 @@
 
 
 ### **获取图像文件接口**
-- **路径**: `/cache/catalog/{file_path:path}`
+- **路径**: `/api/image/catalog/{file_path:path}`
 - **方法**: `GET`
 - **请求体**:
   - `file_path` (路径参数，必须): 图像文件相对路径。
