@@ -7,27 +7,22 @@ from typing import List
 from pydantic import BaseModel
 from pathlib import Path
 import platform
+import html
+
+from typing import Optional
 
 # Pydantic模型用于响应格式化
 class ProductModel(BaseModel):
-    id: int # 
-    model: str # 只需要这个作为产品名称
-    # sku: str
-    # mpn: str
-    quantity: int # 库存容量
-    # stock_status_id: int
-    image_url: str # 首个产品的图片。先这样，后面会改为list
-    # manufacturer_id: int
-    price: float # 价格
-    sold_count:int
-    # 这些是Product表的
-    ###########################
-    # 这些是ProductDescribe表的
-    name: str
-    description:str
-    class Config:
-        from_attributes = True  # 替代原来的 orm_mode
+    id: int  # 产品ID，唯一标识符
+    model: str  # 产品型号，只需要这个作为产品名称
+    quantity: int  # 库存数量
+    image_url: str  # 产品图片URL，首个产品的图片。先这样，后面会改为list
+    price: float  # 产品价格
+    sold_count: Optional[int] = None  # 销售数量，可选字段
+    name: Optional[str] = None  # 产品名称，可选字段
 
+    class Config:
+        orm_mode = True  # 使用orm_mode以支持从SQLAlchemy模型自动转换
 
 router = APIRouter()
 
@@ -37,39 +32,46 @@ def correct_path(path_str: str) -> str:
     corrected_path = '/'.join(corrected_parts)
     return corrected_path
 
+
 @router.get("/id/{product_id}", response_model=ProductModel)
 async def get_product(product_id: int, db: Session = Depends(get_db)):
-    # Fetching product details including description using join
-    result = db.query(Product.id, Product.model, Product.quantity, Product.image_url,
-                      Product.price, ProductDescribe.name, Product.viewed, ProductDescribe.description)\
-               .join(ProductDescribe, Product.id == ProductDescribe.product_id)\
-               .filter(Product.id == product_id).first()
-
+    result = db.query(Product).filter(Product.id == product_id).first()
     if not result:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    # 检查操作系统
     if platform.system() == "Windows":
-        image_url = correct_path(result[3])
-    else:
-        image_url = result[3]
-        
-    base_url = "/api/image"
-    image_url = str(Path(base_url) / image_url)
+        result.image_url = correct_path(result.image_url)
+    
+    result.image_url = f"/api/image/{result.image_url}"  # Construct the full image URL
 
-    # Mapping query results to dictionary that matches Pydantic model
-    product = {
-        "id": result[0],  # product.id
-        "model": result[1],  # product.model
-        "quantity": result[2],  # product.quantity
-        "image_url": image_url, # result[3],  # product.image_url
-        "price": result[4],  # product.price
-        "name": result[5],  # product_describe.name
-        "sold_count": result[6],
-        "description": result[7]  # product_describe.description
+    # Convert SQLAlchemy object to dictionary for optional fields
+    product_dict = {
+        "id": result.id,
+        "model": result.model,
+        "quantity": result.quantity,
+        "image_url": result.image_url,
+        "price": result.price,
+        "sold_count": getattr(result, 'viewed', None),  # Assuming 'viewed' might be used for 'sold_count'
+        "name": getattr(result, 'name', None)  # Only include this line if 'name' is a direct attribute of Product
     }
 
-    return ProductModel(**product)  # Creating a Pydantic model instance with unpacked data
+    return product_dict
+
+class ProductDescriptionModel(BaseModel):
+    description: str
+
+@router.get("/id/{product_id}/desc", response_model=ProductDescriptionModel)
+async def get_product_description(product_id: int, db: Session = Depends(get_db)):
+    result = db.query(ProductDescribe.description)\
+               .filter(ProductDescribe.product_id == product_id)\
+               .first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Product description not found")
+
+    decoded_description = html.unescape(result.description)  # 确保这里使用了正确的属性访问方式
+
+    return ProductDescriptionModel(description=decoded_description)
 
 
 # 放到这里下面
@@ -104,6 +106,7 @@ async def get_product(product_id: int, db: Session = Depends(get_db)):
 
 #     # Mapping results into Pydantic models using list comprehension
 #     return [SimpleProductModel(id=product.id, img_url=product.img_url, name=product.name, model=product.model) for product in popular_products]
+
 
 @router.get("/popular", response_model=List[int])
 async def get_popular_products(db: Session = Depends(get_db)):

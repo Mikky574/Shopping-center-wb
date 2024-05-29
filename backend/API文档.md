@@ -131,7 +131,7 @@
 ### **获取商品**
 #### **获取单个产品详细信息**
 
-- **路径**: `/api/products/product/{product_id}`
+- **路径**: `/api/products/id/{product_id}`
 - **方法**: `GET`
 - **请求头**:
   - 无特殊请求头需求
@@ -143,22 +143,43 @@
   - `quantity` (int): 库存数量。
   - `image_url` (str): 产品图片的URL。
   - `price` (float): 产品价格。
-  - `name` (str): 产品名称。
-  - `description` (str): 产品描述（描述可能包含HTML内容）。
+  - `sold_count` (int, 可选): 销售数量。
+  - `name` (str, 可选): 产品名称。
 - **成功响应示例**:
   ```json
   {
     "id": 1099,
     "model": "CQRJSTEL-A",
     "quantity": 999,
-    "image_url": "catalog/CQRobot/JST EL/JST EL 2P-1.jpg",
+    "image_url": "/api/image/catalog/CQRobot/JST EL/JST EL 2P-1.jpg",
     "price": 6.16,
-    "name": "JST EL - 2 Pin Connector Kit",
-    "description": "Detailed description here..."
+    "sold_count": 500,
+    "name": "JST EL - 2 Pin Connector Kit"
   }
   ```
 - **失败响应**:
   - `404 Not Found`: `detail: "Product not found"` 如果提供的产品ID不存在。
+
+### 获取产品描述
+#### 获取单个产品描述信息
+
+- **路径**: `/api/products/id/{product_id}/desc`
+- **方法**: `GET`
+- **请求头**:
+  - 无特殊请求头需求
+- **路径参数**:
+  - `product_id` (int, 必需): 欲查询的产品的唯一标识符。
+- **成功响应体**:
+  - `description` (str): 产品描述（描述可能包含HTML内容）。
+- **成功响应示例**:
+  ```json
+  {
+    "description": "<p><font face="Tahoma"><span style="font-size: 12px;">Ocean: MCP23017 IO Expansion Board expands 2..."
+  }
+  ```
+- **失败响应**:
+  - `404 Not Found`: `detail: "Product description not found"` 如果提供的产品描述不存在。
+
 
 #### **获取热门产品列表**
 
