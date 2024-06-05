@@ -45,5 +45,5 @@
 - **请求体**: 无
 - **成功响应**:
   - **状态码**: `200 OK`
-  - **响应体**: [`/api/image/catalog/aaaa.png`,`/api/image/catalog/bbbb.png`,......](包含Carousel中所有图片的API路径列表。)
+  - **响应体**: [`/api/image/catalog/aaaa.png`,`/api/image/catalog/bbbb.png`,......] 包含Carousel中所有图片的API路径列表。
 
