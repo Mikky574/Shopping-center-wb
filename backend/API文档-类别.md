@@ -17,13 +17,11 @@
             "children": [
                 {
                     "id": 2,
-                    "name": "Child 1-1",
-                    "children": []
+                    "name": "Child 1-1"
                 },
                 {
                     "id": 3,
-                    "name": "Child 1-2",
-                    "children": []
+                    "name": "Child 1-2"
                 }
             ]
         },
@@ -33,8 +31,7 @@
             "children": [
                 {
                     "id": 5,
-                    "name": "Child 2-1",
-                    "children": []
+                    "name": "Child 2-1"
                 }
             ]
         }
