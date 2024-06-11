@@ -1,0 +1,800 @@
+[
+    {
+        "id": 107,
+        "name": "Sensor"
+    },
+    {
+        "id": 237,
+        "name": "Robotics",
+        "children": [
+            {
+                "id": 249,
+                "name": "Accessories"
+            },
+            {
+                "id": 309,
+                "name": "Component"
+            },
+            {
+                "id": 435,
+                "name": "Mobile Robots"
+            },
+            {
+                "id": 436,
+                "name": "Dog-like Robots"
+            },
+            {
+                "id": 437,
+                "name": "Drivers / Sensors / Lidar"
+            },
+            {
+                "id": 438,
+                "name": "Motors / Servos"
+            },
+            {
+                "id": 439,
+                "name": "Robot Arm / Control"
+            },
+            {
+                "id": 440,
+                "name": "Robotic Components"
+            }
+        ]
+    },
+    {
+        "id": 238,
+        "name": "Prototyping",
+        "children": [
+            {
+                "id": 255,
+                "name": "Connector Plug",
+                "children": [
+                    {
+                        "id": 257,
+                        "name": "JST Connector",
+                        "children": [
+                            {
+                                "id": 261,
+                                "name": "JST PH"
+                            },
+                            {
+                                "id": 263,
+                                "name": "JST XH"
+                            },
+                            {
+                                "id": 265,
+                                "name": "JST PA"
+                            },
+                            {
+                                "id": 267,
+                                "name": "JST XA"
+                            },
+                            {
+                                "id": 269,
+                                "name": "JST SM"
+                            },
+                            {
+                                "id": 270,
+                                "name": "JST EL"
+                            },
+                            {
+                                "id": 271,
+                                "name": "JST SYP"
+                            },
+                            {
+                                "id": 320,
+                                "name": "JST ZH"
+                            },
+                            {
+                                "id": 321,
+                                "name": "JST VH"
+                            },
+                            {
+                                "id": 323,
+                                "name": "JST CH"
+                            },
+                            {
+                                "id": 338,
+                                "name": "JST GH"
+                            },
+                            {
+                                "id": 339,
+                                "name": "JST SH"
+                            }
+                        ]
+                    },
+                    {
+                        "id": 322,
+                        "name": "DuPont"
+                    },
+                    {
+                        "id": 328,
+                        "name": "Molex"
+                    },
+                    {
+                        "id": 456,
+                        "name": "Automotive Connector"
+                    }
+                ]
+            },
+            {
+                "id": 256,
+                "name": "Speaker",
+                "children": [
+                    {
+                        "id": 260,
+                        "name": "Speaker CQR3070",
+                        "children": [
+                            {
+                                "id": 278,
+                                "name": "8Ω5W"
+                            },
+                            {
+                                "id": 279,
+                                "name": "8Ω3W"
+                            },
+                            {
+                                "id": 280,
+                                "name": "4Ω3W"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 259,
+                "name": "Serial Port Converter",
+                "children": [
+                    {
+                        "id": 274,
+                        "name": "USB to RS422 or RS485"
+                    },
+                    {
+                        "id": 275,
+                        "name": "RS232 to RS422/RS485"
+                    },
+                    {
+                        "id": 276,
+                        "name": "RS232 to RS485"
+                    },
+                    {
+                        "id": 367,
+                        "name": "USB to RS232"
+                    }
+                ]
+            },
+            {
+                "id": 295,
+                "name": "Connect Cable",
+                "children": [
+                    {
+                        "id": 296,
+                        "name": "XT60 Cable"
+                    }
+                ]
+            },
+            {
+                "id": 324,
+                "name": "Screws and Nuts",
+                "children": [
+                    {
+                        "id": 325,
+                        "name": "PC Clear Acrylic",
+                        "children": [
+                            {
+                                "id": 326,
+                                "name": "M3"
+                            },
+                            {
+                                "id": 327,
+                                "name": "M2.5"
+                            },
+                            {
+                                "id": 340,
+                                "name": "M4"
+                            },
+                            {
+                                "id": 341,
+                                "name": "M5"
+                            },
+                            {
+                                "id": 342,
+                                "name": "M6"
+                            }
+                        ]
+                    },
+                    {
+                        "id": 389,
+                        "name": "Nylon Black",
+                        "children": [
+                            {
+                                "id": 390,
+                                "name": "M2"
+                            },
+                            {
+                                "id": 391,
+                                "name": "M2.5"
+                            },
+                            {
+                                "id": 392,
+                                "name": "M3"
+                            },
+                            {
+                                "id": 393,
+                                "name": "M4"
+                            },
+                            {
+                                "id": 396,
+                                "name": "M5"
+                            },
+                            {
+                                "id": 397,
+                                "name": "M6"
+                            },
+                            {
+                                "id": 398,
+                                "name": "M8"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 333,
+                "name": "Jumper Cap",
+                "children": [
+                    {
+                        "id": 334,
+                        "name": "5.08mm"
+                    },
+                    {
+                        "id": 335,
+                        "name": "2.54mm"
+                    },
+                    {
+                        "id": 336,
+                        "name": "2.0mm"
+                    }
+                ]
+            },
+            {
+                "id": 352,
+                "name": "PCB Soldering Terminal",
+                "children": [
+                    {
+                        "id": 353,
+                        "name": "M3"
+                    },
+                    {
+                        "id": 354,
+                        "name": "M4"
+                    }
+                ]
+            },
+            {
+                "id": 355,
+                "name": "IDC Box Header Connector",
+                "children": [
+                    {
+                        "id": 356,
+                        "name": "2.54mm Pitch"
+                    },
+                    {
+                        "id": 394,
+                        "name": "2.0mm Pitch"
+                    }
+                ]
+            },
+            {
+                "id": 360,
+                "name": "DIP Switch SMT",
+                "children": [
+                    {
+                        "id": 343,
+                        "name": "1.27 mm Pitch",
+                        "children": [
+                            {
+                                "id": 344,
+                                "name": "1 Position"
+                            },
+                            {
+                                "id": 345,
+                                "name": "2 Position"
+                            },
+                            {
+                                "id": 346,
+                                "name": "3 Position"
+                            },
+                            {
+                                "id": 347,
+                                "name": "4 Position"
+                            },
+                            {
+                                "id": 348,
+                                "name": "5 Position"
+                            },
+                            {
+                                "id": 349,
+                                "name": "6 Position"
+                            },
+                            {
+                                "id": 350,
+                                "name": "8 Position"
+                            },
+                            {
+                                "id": 351,
+                                "name": "10 Position"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 457,
+                "name": "DC Power Plug",
+                "children": [
+                    {
+                        "id": 458,
+                        "name": "Female Plug"
+                    },
+                    {
+                        "id": 459,
+                        "name": "Male Plug"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 242,
+        "name": "DC Gearmotors ",
+        "children": [
+            {
+                "id": 243,
+                "name": "Diameter 37mm",
+                "children": [
+                    {
+                        "id": 244,
+                        "name": "With Encoder",
+                        "children": [
+                            {
+                                "id": 293,
+                                "name": "12V With Encoder"
+                            },
+                            {
+                                "id": 294,
+                                "name": "24V With Encoder"
+                            }
+                        ]
+                    },
+                    {
+                        "id": 297,
+                        "name": "Without Encoder",
+                        "children": [
+                            {
+                                "id": 300,
+                                "name": "12V Without Encoder"
+                            },
+                            {
+                                "id": 302,
+                                "name": "24V Without Encoder"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 245,
+                "name": "Diameter 25mm",
+                "children": [
+                    {
+                        "id": 286,
+                        "name": "With Encoder",
+                        "children": [
+                            {
+                                "id": 287,
+                                "name": "6V With-Encoder HP"
+                            },
+                            {
+                                "id": 288,
+                                "name": "6V With-Encoder LP"
+                            },
+                            {
+                                "id": 289,
+                                "name": "12V With-Encoder HP"
+                            },
+                            {
+                                "id": 290,
+                                "name": "12V With-Encoder LP"
+                            },
+                            {
+                                "id": 291,
+                                "name": "12V With-Encoder MP"
+                            }
+                        ]
+                    },
+                    {
+                        "id": 298,
+                        "name": "Without Encoder",
+                        "children": [
+                            {
+                                "id": 299,
+                                "name": "12V HP"
+                            },
+                            {
+                                "id": 301,
+                                "name": "12V MP"
+                            },
+                            {
+                                "id": 303,
+                                "name": "12V LP"
+                            },
+                            {
+                                "id": 304,
+                                "name": "6V HP"
+                            },
+                            {
+                                "id": 305,
+                                "name": "6V LP"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 246,
+                "name": "Diameter 20mm",
+                "children": [
+                    {
+                        "id": 318,
+                        "name": "Without Encoder"
+                    },
+                    {
+                        "id": 319,
+                        "name": "With Encoder"
+                    }
+                ]
+            },
+            {
+                "id": 310,
+                "name": "Diameter 12mm",
+                "children": [
+                    {
+                        "id": 248,
+                        "name": "Single-Shaft",
+                        "children": [
+                            {
+                                "id": 250,
+                                "name": "6V Single-Shaft LP"
+                            },
+                            {
+                                "id": 251,
+                                "name": "6V Single-Shaft MP"
+                            },
+                            {
+                                "id": 252,
+                                "name": "6V Single-Shaft HP"
+                            },
+                            {
+                                "id": 253,
+                                "name": "6V Single-Shaft HPCB"
+                            },
+                            {
+                                "id": 254,
+                                "name": "12V Single-Shaft HPCB"
+                            }
+                        ]
+                    },
+                    {
+                        "id": 311,
+                        "name": "Dual-Shaft",
+                        "children": [
+                            {
+                                "id": 312,
+                                "name": "6V Dual-Shaft LP"
+                            },
+                            {
+                                "id": 313,
+                                "name": "6V Dual-Shaft MP"
+                            },
+                            {
+                                "id": 314,
+                                "name": "6V Dual-Shaft HP"
+                            },
+                            {
+                                "id": 315,
+                                "name": "6V Dual-Shaft HPCB"
+                            },
+                            {
+                                "id": 316,
+                                "name": "12V Dual-Shaft HPCB"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 306,
+        "name": "Dev Platform",
+        "children": [
+            {
+                "id": 232,
+                "name": "AI"
+            },
+            {
+                "id": 234,
+                "name": "Raspberry Pi"
+            },
+            {
+                "id": 235,
+                "name": "Arduino"
+            },
+            {
+                "id": 307,
+                "name": "Components",
+                "children": [
+                    {
+                        "id": 329,
+                        "name": "Cameras",
+                        "children": [
+                            {
+                                "id": 330,
+                                "name": "Single Cameras"
+                            },
+                            {
+                                "id": 331,
+                                "name": "Binocular Cameras"
+                            }
+                        ]
+                    },
+                    {
+                        "id": 332,
+                        "name": "Expansions"
+                    }
+                ]
+            },
+            {
+                "id": 308,
+                "name": "Accessories",
+                "children": [
+                    {
+                        "id": 366,
+                        "name": "Wireless NIC"
+                    }
+                ]
+            },
+            {
+                "id": 317,
+                "name": "micro:bit"
+            }
+        ]
+    },
+    {
+        "id": 395,
+        "name": "M5"
+    },
+    {
+        "id": 399,
+        "name": "Raspberry Pi",
+        "children": [
+            {
+                "id": 400,
+                "name": "Boards / Kits"
+            },
+            {
+                "id": 401,
+                "name": "Displays"
+            },
+            {
+                "id": 402,
+                "name": "Cameras"
+            },
+            {
+                "id": 403,
+                "name": "HATs"
+            },
+            {
+                "id": 404,
+                "name": "All-in-one"
+            },
+            {
+                "id": 405,
+                "name": "Robots"
+            },
+            {
+                "id": 406,
+                "name": "Portable Gaming"
+            },
+            {
+                "id": 407,
+                "name": "Accessories"
+            }
+        ]
+    },
+    {
+        "id": 408,
+        "name": "AI",
+        "children": [
+            {
+                "id": 409,
+                "name": "Boards / Kits"
+            },
+            {
+                "id": 410,
+                "name": "Displays"
+            },
+            {
+                "id": 411,
+                "name": "Cameras"
+            },
+            {
+                "id": 412,
+                "name": "Expansions"
+            },
+            {
+                "id": 413,
+                "name": "Robots"
+            },
+            {
+                "id": 414,
+                "name": "Accessories"
+            }
+        ]
+    },
+    {
+        "id": 415,
+        "name": "RISC-V",
+        "children": [
+            {
+                "id": 416,
+                "name": "Boards / Kits"
+            },
+            {
+                "id": 417,
+                "name": "Displays"
+            },
+            {
+                "id": 418,
+                "name": "Expansions / Accessories"
+            },
+            {
+                "id": 419,
+                "name": "Cameras"
+            }
+        ]
+    },
+    {
+        "id": 420,
+        "name": "Displays",
+        "children": [
+            {
+                "id": 421,
+                "name": "LCD"
+            },
+            {
+                "id": 422,
+                "name": "OLED"
+            },
+            {
+                "id": 423,
+                "name": "e-Paper"
+            },
+            {
+                "id": 424,
+                "name": "Accessories"
+            }
+        ]
+    },
+    {
+        "id": 425,
+        "name": "IoT / Communication",
+        "children": [
+            {
+                "id": 426,
+                "name": "Long Range Wireless"
+            },
+            {
+                "id": 427,
+                "name": "Short Range Wireless"
+            },
+            {
+                "id": 428,
+                "name": "Wired Comm / Converter"
+            }
+        ]
+    },
+    {
+        "id": 429,
+        "name": "Misc Modules",
+        "children": [
+            {
+                "id": 430,
+                "name": "Cameras / Audio / Video"
+            },
+            {
+                "id": 431,
+                "name": "Sensors"
+            },
+            {
+                "id": 432,
+                "name": "Motors / Servos"
+            },
+            {
+                "id": 433,
+                "name": "Others"
+            }
+        ]
+    },
+    {
+        "id": 434,
+        "name": "Robotics"
+    },
+    {
+        "id": 441,
+        "name": "Arduino-Related / Nucleo",
+        "children": [
+            {
+                "id": 442,
+                "name": "Boards / Kits"
+            },
+            {
+                "id": 443,
+                "name": "Shields"
+            },
+            {
+                "id": 444,
+                "name": "Robots"
+            }
+        ]
+    },
+    {
+        "id": 445,
+        "name": "micro:bit",
+        "children": [
+            {
+                "id": 446,
+                "name": "Boards / Kits"
+            },
+            {
+                "id": 447,
+                "name": "Expansions"
+            },
+            {
+                "id": 448,
+                "name": "Robots"
+            }
+        ]
+    },
+    {
+        "id": 449,
+        "name": "MCU / ARM",
+        "children": [
+            {
+                "id": 450,
+                "name": "Core Boards / Compact Boards"
+            },
+            {
+                "id": 451,
+                "name": "Development Boards / Expansions"
+            },
+            {
+                "id": 452,
+                "name": "Debugger / Programmer"
+            },
+            {
+                "id": 453,
+                "name": "Programming Adapters"
+            }
+        ]
+    },
+    {
+        "id": 454,
+        "name": "FPGA"
+    },
+    {
+        "id": 455,
+        "name": "Sockets / Adapters"
+    }
+]

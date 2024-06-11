@@ -160,3 +160,12 @@ class Address(Base):
     country = Column(String, nullable=False)
     user = relationship("User", back_populates="addresses")
 
+
+# 商品类别
+# Define the Category class
+class Category(Base):
+    __tablename__ = 'category'
+    category_id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, nullable=False)
+    name = Column(String(255), nullable=False)
+
