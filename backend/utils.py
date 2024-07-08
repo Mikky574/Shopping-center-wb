@@ -74,90 +74,59 @@ def store_token_info(access_token: str, refresh_token: str, db: Session, exp_tim
     db.add(token_mapping)
     db.commit()
 
-# def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-#     credentials_exception = HTTPException(
-#         status_code=status.HTTP_401_UNAUTHORIZED,
-#         detail="Could not validate credentials",
-#         headers={"WWW-Authenticate": "Bearer"},
-#     )
-#     token_expired_exception = HTTPException(
-#         status_code=status.HTTP_401_UNAUTHORIZED,
-#         detail="Token has expired",
-#         headers={"WWW-Authenticate": "Bearer"},
-#     )
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-
-#         email = payload.get("sub")
-#         if email is None:
-#             raise credentials_exception
-
-#         user = db.query(User).filter(User.email == email).first()
-#         if user is None:
-#             raise credentials_exception
-
-#         return user
-
-#     except ExpiredSignatureError:
-#         raise token_expired_exception
-#     except JWTError:
-#         raise credentials_exception
-
-
 def verify_token(token: str) -> Tuple[Optional[str], bool]:
     """
     验证令牌的有效性并提取用户邮箱。返回email和令牌是否有效的信息。
-
     :param token: 提供的JWT令牌。
     :return: 一个元组，其中第一个元素是email（如果提取成功），否则为None；
              第二个元素是一个布尔值，表示令牌是否有效（未过期）。
-    :raises HTTPException: 如果令牌完全无效。
     """
     try:
         # 尝试解码，忽略过期检查
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
         email = payload.get("sub")
-        if email is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token is invalid",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        # 检查令牌是否真的过期
-        try:
-            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            # 如果这里没有抛出异常，则令牌有效
-            return email, False
-        except ExpiredSignatureError:
-            # 如果抛出了过期异常，则令牌已过期，但email有效
-            return email, True
+        if not email:
+            return None, False  # 没有email，令牌无效
+
+        # 再次尝试解码，不忽略过期检查，来确定令牌是否真的过期
+        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return email, True  # 令牌有效
+    except ExpiredSignatureError:
+        return email, False  # 令牌过期，但email仍然提取成功
     except JWTError:
-        # 如果解码失败，则令牌完全无效
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is invalid",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return None, False  # 解码失败，令牌无效
+
+
+def verify_token_and_check_db(token: str, db: Session) -> Tuple[Optional[str], bool]:
+    """
+    验证令牌的有效性，并检查它是否存在于数据库中。
+    :param token: 提供的JWT令牌。
+    :param db: 数据库会话实例。
+    :return: 一个元组，其中第一个元素是email（如果提取成功），否则为None；
+             第二个元素是一个布尔值，表示令牌是否有效（未过期）。
+    """
+    email, is_valid = verify_token(token)  # 调用已有的验证函数
+    if not is_valid:
+        return email, False  # 令牌无效或已过期
+
+    # 在数据库中检查token是否存在
+    token_exists = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first() is not None
+    if not token_exists:
+        return email, False  # 令牌不在数据库中
+
+    return email, True  # 令牌在数据库中存在且有
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
-    email, is_token_expired = verify_token(token)
-    if is_token_expired:
+    email, token_expired = verify_token_and_check_db(token,db)
+    if not token_expired:
         # 如果令牌过期，直接抛出异常提示令牌过期
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # if not email:
-    #     # 如果没有提供有效的电子邮件，即令牌无效，抛出另一个异常
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="Invalid authentication credentials",
-    #         headers={"WWW-Authenticate": "Bearer"},
-    #     )
-
+        
     user = db.query(User).filter(User.email == email).first()
     if not user:
         # # 如果无法根据电子邮件找到用户，抛出用户未找到的异常
@@ -177,39 +146,43 @@ def handle_refresh_token_expiration(db: Session, email: str) -> Tuple[str, int]:
     new_refresh_token = create_refresh_token(data={"sub": email})
     new_exp_at = int((datetime.now(timezone.utc) + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)).timestamp())
 
-    # 更新数据库中的令牌信息
-    db.query(AccTokenMapping).filter(AccTokenMapping.email == email).update({
-        AccTokenMapping.refresh_token: new_refresh_token,
-        AccTokenMapping.exp_at: new_exp_at
-    })
-    db.commit()
-
     return new_refresh_token, new_exp_at
 
-def refresh_token_logic(db: Session, token_data: AccTokenMapping, email: str) -> (str, int):
+def refresh_token_logic(db: Session, refresh_token: str, SECRET_KEY: str, ALGORITHM: str) -> (str, int):
     """
-    处理刷新令牌的逻辑，包括检查有效性和生成新的令牌。
-
+    处理刷新令牌的逻辑，包括解码刷新令牌、检查有效性和生成新的令牌。
     :param db: 数据库会话实例。
-    :param token_data: 当前的令牌信息。
-    :param email: 用户的邮箱地址。
+    :param refresh_token: 当前的刷新令牌。
+    :param SECRET_KEY: 用于JWT编解码的秘钥。
+    :param ALGORITHM: 使用的JWT算法。
     :return: 新的刷新令牌和它的过期时间戳。
     """
-    current_utc_timestamp = int(datetime.now(timezone.utc).timestamp())
+    try:
+        # 解码刷新令牌，检查过期
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        exp_at = payload.get("exp")
 
-    # 检查刷新令牌是否已过期
-    if token_data.exp_at < current_utc_timestamp:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is invalid or expired")
+        if not email:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid refresh token")
 
-    # 如果刷新令牌即将过期，生成新的刷新令牌，否则继续使用现有的刷新令牌
-    if token_data.exp_at - current_utc_timestamp < REFRESH_TOKEN_EXPIRE_MINUTES/7 *60: # 24*60*60:
-        new_refresh_token, new_exp_at = handle_refresh_token_expiration(db, email)
-    else:
-        new_refresh_token = token_data.refresh_token
-        new_exp_at = token_data.exp_at
+        current_utc_timestamp = int(datetime.now(timezone.utc).timestamp())
 
-    return new_refresh_token, new_exp_at
+        # 如果刷新令牌即将过期，生成新的刷新令牌
+        if exp_at - current_utc_timestamp < REFRESH_TOKEN_EXPIRE_MINUTES * 60 / 7:
+            new_refresh_token, new_exp_at = handle_refresh_token_expiration(db, email)
+        else:
+            new_refresh_token = refresh_token
+            new_exp_at = exp_at
 
+        return new_refresh_token, new_exp_at
+
+    except ExpiredSignatureError:
+        # 令牌过期，直接抛出异常
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is expired")
+    except JWTError:
+        # 令牌解码失败或其他JWT错误
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid refresh token")
 
 def generate_and_store_tokens(db: Session, email: str, refresh_token: str, exp_at: int) -> str:
     """生成新的访问令牌，更新数据库，并返回新的访问令牌。"""
@@ -221,10 +194,10 @@ def generate_and_store_tokens(db: Session, email: str, refresh_token: str, exp_a
 
 def delete_specific_token_record(db: Session, access_token: str):
     """
-    只删除与给定访问令牌相关的记录。
-    
+    删除与给定访问令牌相关的记录。
     :param db: 数据库会话实例。
     :param access_token: 需要删除记录的访问令牌。
     """
-    db.query(AccTokenMapping).filter(AccTokenMapping.access_token == access_token).delete()
+    records_deleted = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == access_token).delete()
     db.commit()
+    return records_deleted > 0  # 返回是否成功删除了记录

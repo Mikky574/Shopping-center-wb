@@ -13,6 +13,7 @@ from utils import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_db,
     verify_password,
+    verify_token_and_check_db,
     verify_token,
     store_token_info,
     refresh_token_logic,
@@ -125,8 +126,12 @@ async def login_user(form_data: LoginFormData, db: Session = Depends(get_db)):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 3h的分钟数
+        # "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,  # 3h的分钟数
     }
+
+
+
+
 
 @router.post("/reset_password")
 async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get_db)):
@@ -146,30 +151,17 @@ async def reset_password(form_data: PasswordResetForm, db: Session = Depends(get
 
     return {"message": "Password updated successfully."}
 
+
+
 @router.post("/logout")
 async def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
-    # 假设AccTokenMapping有一个字段表示令牌是否有效，如is_active
-    # 首先验证令牌
-    email, is_token_expired = verify_token(token)
-    if is_token_expired: #email is None or 
-        # 如果令牌无效或已过期，直接返回提示信息
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is expired",
-            # headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # 直接删除与当前访问令牌相关的记录
-    token_record = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first()
-    if token_record:
-        db.delete(token_record)
-        db.commit()
-        return {"message": "You have been logged out."}
+    # 尝试删除token
+    if delete_specific_token_record(db, token):
+        return {"message": "You have been logged out successfully."}
     else:
-        # 如果找不到令牌记录，可能是因为它已被删除或从未存在
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Token record not found",
+            detail="Token record not found"
         )
 
 
@@ -190,33 +182,48 @@ async def read_user_me(current_user: User = Depends(get_current_user), db: Sessi
             status_code=404, detail="User information not found")
 
 
-@router.post("/refresh_token")
+@router.post("/refresh_token") # 刷新通行令牌
 async def refresh_access_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> dict:
-    email,is_token_expired = verify_token(token)  # 验证acc是否有效
     token_data = db.query(AccTokenMapping).filter(AccTokenMapping.access_token == token).first()
     if not token_data :
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is invalid or expired")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token is invalid")
+    
+    refresh_token=token_data.refresh_token
+    
+    email , token_expired = verify_token_and_check_db(token)  # 验证acc是否有效
 
-    if not is_token_expired:
+    if token_expired: # 还有效的话，就不变
         return {
             "access_token": token,  # 直接返回现有的访问令牌
             "token_type": "bearer",
-            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES  # 可选：计算剩余有效时间
+            # "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES  # 可选：计算剩余有效时间
         }
 
     # 删除与当前访问令牌相关的记录
     delete_specific_token_record(db, token)
-
-    new_refresh_token, new_exp_at = refresh_token_logic(db, token_data, email)
-
+    
+    # 检查通过，重新生成acc和 refresh_token的对应关系
+    
+    new_refresh_token, new_exp_at = refresh_token_logic(db, refresh_token) # 给的是refresh token，万一过期了就刷新
+    
     # 生成新的访问令牌并存储新的令牌信息
     new_access_token = generate_and_store_tokens(db, email, new_refresh_token, new_exp_at)
 
     return {
         "access_token": new_access_token,
         "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES
+        # "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES
     }
+
+
+
+
+
+
+
+
+
+
 
 
 # address信息

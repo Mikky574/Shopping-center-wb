@@ -161,11 +161,23 @@ class Address(Base):
     user = relationship("User", back_populates="addresses")
 
 
-# 商品类别
-# Define the Category class
+# # 商品类别
+# # Define the Category class
+# class Category(Base):
+#     __tablename__ = 'category'
+#     category_id = Column(Integer, primary_key=True)
+#     parent_id = Column(Integer, nullable=False)
+#     name = Column(String(255), nullable=False)
+
+# 定义Category类
 class Category(Base):
     __tablename__ = 'category'
     category_id = Column(Integer, primary_key=True)
     parent_id = Column(Integer, nullable=False)
+
+# 定义CategoryDescription类
+class CategoryDescription(Base):
+    __tablename__ = 'category_description'
+    category_id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
 
