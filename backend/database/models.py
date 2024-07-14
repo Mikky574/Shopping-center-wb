@@ -98,7 +98,7 @@ class Product(Base):
     
     # todo：反向多对一关系 -> Cart
     # todo：反向多对一关系 -> Order
-    carts = relationship("Cart", back_populates="product")
+    # carts = relationship("Cart", back_populates="product")
     orders = relationship("Order", back_populates="product")
 
     descriptions = relationship("ProductDescribe", back_populates="product")  # 反向多对一关系
@@ -126,7 +126,7 @@ class Cart(Base):
     # todo：反向一对多关系 -> User
     # todo：多对一关系 -> Product
     user = relationship("User", back_populates="carts")
-    product = relationship("Product", back_populates="carts")
+    # product = relationship("Product")
 
 from sqlalchemy.sql.functions import now
 

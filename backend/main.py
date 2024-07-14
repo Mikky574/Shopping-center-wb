@@ -11,6 +11,14 @@ from apis import router as api_router
 app = FastAPI(title='CQRobot-Online-Shop')
 api = FastAPI(title=app.title, servers=[{'url': '/api'}])
 
+# 商标
+# 确保这个路径正确指向您的favicon.ico文件
+ico_path = Path("catalog") / "opencart.ico"
+
+@app.get("/favicon.ico", response_class=FileResponse)
+async def get_logo_image():
+    return ico_path
+
 
 app.mount(api.servers[0]['url'], api)
 

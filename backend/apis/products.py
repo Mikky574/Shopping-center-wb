@@ -15,9 +15,12 @@ from typing import Optional
 class ProductModel(BaseModel):
     id: int  # 产品ID，唯一标识符
     model: str  # 产品型号，只需要这个作为产品名称
+    sku: str
+    mpn:str
     quantity: int  # 库存数量
     image_url: str  # 产品图片URL，首个产品的图片。先这样，后面会改为list
     price: float  # 产品价格
+    weight_grams: float
     sold_count: Optional[int] = None  # 销售数量，可选字段
     name: Optional[str] = None  # 产品名称，可选字段
 
@@ -43,19 +46,24 @@ async def get_product(product_id: int, db: Session = Depends(get_db)):
         result.image_url = correct_path(result.image_url)
     
     result.image_url = f"/api/image/{result.image_url}"  # Construct the full image URL
-
+    
     # Convert SQLAlchemy object to dictionary for optional fields
     product_dict = {
         "id": result.id,
         "model": result.model,
+        "sku": result.sku,
+        "mpn": result.mpn,
         "quantity": result.quantity,
         "image_url": result.image_url,
         "price": result.price,
+        "weight_grams": result.weight_grams,
         "sold_count": getattr(result, 'viewed', None),  # Assuming 'viewed' might be used for 'sold_count'
         "name": getattr(result, 'name', None)  # Only include this line if 'name' is a direct attribute of Product
     }
+    # print(product_dict)
 
     return product_dict
+
 
 class ProductDescriptionModel(BaseModel):
     description: str

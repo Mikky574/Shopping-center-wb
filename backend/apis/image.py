@@ -52,6 +52,10 @@ carousel_paths = [
     Path("catalog") / "1.JPG",
     Path("catalog") / "journal3" / "banners" / "jess-watters-500955-unsplash.jpg",
 ]
+ico_path= Path("catalog") / "opencart.ico"
+@router.get("/favicon.ico", response_model=str)
+async def get_logo_image():
+    return construct_api_path(str(ico_path))
 
 @router.get("/logo", response_model=str)
 async def get_logo_image():
